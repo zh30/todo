@@ -19,4 +19,14 @@
     <string name="language_bn">বাংলা</string>
     <string name="language_pt">Português</string>
     <string name="empty_state_hint">还没有待办事项？\n点击麦克风开始吧！</string>
+    <string name="voice_error_no_match">没有听到声音</string>
+    <string name="voice_error_network">网络错误</string>
+    <string name="voice_error_generic">语音识别错误 (Error: %1$d)</string>
+    <string name="permission_mic_needed">需要麦克风权限</string>
+    <string name="cd_more_options">更多选项</string>
+    <string name="voice_error_init">无法启动语音: %1$s</string>
+    <string name="cd_add_by_voice">语音添加</string>
+    <string name="cd_mic">麦克风</string>
+    <string name="cd_close">关闭</string>
+    <string name="cd_remove">移除</string>
 </resources>

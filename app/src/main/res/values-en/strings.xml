@@ -14,4 +14,14 @@
     <string name="language_en">English</string>
     <string name="language_zh">Chinese</string>
     <string name="empty_state_hint">No tasks yet?\nTap the microphone to get started!</string>
+    <string name="voice_error_no_match">No match found</string>
+    <string name="voice_error_network">Network error</string>
+    <string name="voice_error_generic">Recognition error: %1$d</string>
+    <string name="permission_mic_needed">Microphone permission needed</string>
+    <string name="cd_more_options">More options</string>
+    <string name="voice_error_init">Cannot start voice: %1$s</string>
+    <string name="cd_add_by_voice">Add by voice</string>
+    <string name="cd_mic">Mic</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_remove">Remove</string>
 </resources>

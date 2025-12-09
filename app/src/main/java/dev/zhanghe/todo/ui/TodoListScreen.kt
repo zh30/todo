@@ -113,9 +113,9 @@ fun TodoListScreen(
             override fun onError(error: Int) {
                 isRecording = false
                 val message = when(error) {
-                    android.speech.SpeechRecognizer.ERROR_NO_MATCH -> "没有听到声音 (No match)"
-                    android.speech.SpeechRecognizer.ERROR_NETWORK -> "网络错误 (Network error)"
-                    else -> "语音识别错误 (Error: $error)"
+                    android.speech.SpeechRecognizer.ERROR_NO_MATCH -> context.getString(R.string.voice_error_no_match)
+                    android.speech.SpeechRecognizer.ERROR_NETWORK -> context.getString(R.string.voice_error_network)
+                    else -> context.getString(R.string.voice_error_generic, error)
                 }
                 android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
             }
@@ -143,7 +143,7 @@ fun TodoListScreen(
         if (isGranted) {
             // Permission granted, user can try pressing again
         } else {
-             android.widget.Toast.makeText(context, "需要麦克风权限 (Need mic permission)", android.widget.Toast.LENGTH_SHORT).show()
+             android.widget.Toast.makeText(context, context.getString(R.string.permission_mic_needed), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -185,7 +185,7 @@ fun TodoListScreen(
                     IconButton(onClick = { showMenu = true }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More options"
+                            contentDescription = stringResource(R.string.cd_more_options)
                         )
                     }
                     DropdownMenu(
@@ -252,7 +252,7 @@ fun TodoListScreen(
                                  onPress = {
                                      val isAvailable = android.speech.SpeechRecognizer.isRecognitionAvailable(context)
                                      if (!isAvailable) {
-                                         android.widget.Toast.makeText(context, "设备不支持语音识别 (Speech not available)", android.widget.Toast.LENGTH_SHORT).show()
+                                         android.widget.Toast.makeText(context, context.getString(R.string.voice_not_supported), android.widget.Toast.LENGTH_SHORT).show()
                                          return@detectTapGestures
                                      }
 
@@ -274,7 +274,7 @@ fun TodoListScreen(
                                          } catch (e: Exception) {
                                              isRecording = false
                                              e.printStackTrace()
-                                             android.widget.Toast.makeText(context, "无法启动语音: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                             android.widget.Toast.makeText(context, context.getString(R.string.voice_error_init, e.message), android.widget.Toast.LENGTH_SHORT).show()
                                          }
                                      } else {
                                          requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -286,7 +286,7 @@ fun TodoListScreen(
                 ) {
                     Icon(
                         painter = painterResource(id = android.R.drawable.ic_btn_speak_now),
-                        contentDescription = "Add by voice",
+                        contentDescription = stringResource(R.string.cd_add_by_voice),
                         modifier = Modifier.size(28.dp),
                         tint = Color.Black
                     )
@@ -308,7 +308,7 @@ fun TodoListScreen(
                 ) {
                     Icon(
                         imageVector = androidx.compose.material.icons.Icons.Outlined.Mic,
-                        contentDescription = "Mic",
+                        contentDescription = stringResource(R.string.cd_mic),
                         tint = SurfaceGreen,
                         modifier = Modifier.size(80.dp)
                     )
@@ -411,7 +411,7 @@ fun VoiceResultDialog(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = androidx.compose.material.icons.Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.cd_close),
                             tint = Color.White
                         )
                     }
@@ -453,7 +453,7 @@ fun VoiceResultDialog(
                                 IconButton(onClick = { tasks = tasks - task }) {
                                     Icon(
                                         imageVector = Icons.Outlined.Delete, // Use outlined delete for style
-                                        contentDescription = "Remove",
+                                        contentDescription = stringResource(R.string.cd_remove),
                                         tint = Color.Gray // Or maybe a softer delete color
                                     )
                                 }
