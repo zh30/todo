@@ -167,18 +167,13 @@ fun TodoListScreen(
             })
         },
         topBar = {
-            TopAppBar(
+            androidx.compose.material3.CenterAlignedTopAppBar(
                 title = { 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.app_title),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.app_title),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = DeepDarkGreen, // Match background
