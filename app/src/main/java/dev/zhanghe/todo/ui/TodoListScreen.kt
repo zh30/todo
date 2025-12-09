@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.DisposableEffect
+import android.os.Bundle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -95,18 +97,43 @@ fun TodoListScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
 
-    val speechRecognizerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val data = result.data
-            val results = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            val spokenText = results?.get(0) ?: ""
-            if (spokenText.isNotBlank()) {
-                // Instead of adding directly, analyze and show dialog
-                val analyzed = viewModel.analyzeVoiceInput(spokenText)
-                voiceResultTodos = analyzed
+    // Voice Recognition State
+    var isRecording by remember { mutableStateOf(false) }
+    val speechRecognizer = remember { android.speech.SpeechRecognizer.createSpeechRecognizer(context) }
+    
+    DisposableEffect(Unit) {
+        val listener = object : android.speech.RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {
+                isRecording = false
             }
+            override fun onError(error: Int) {
+                isRecording = false
+                val message = when(error) {
+                    android.speech.SpeechRecognizer.ERROR_NO_MATCH -> "没有听到声音 (No match)"
+                    android.speech.SpeechRecognizer.ERROR_NETWORK -> "网络错误 (Network error)"
+                    else -> "语音识别错误 (Error: $error)"
+                }
+                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            }
+            override fun onResults(results: Bundle?) {
+                isRecording = false
+                val matches = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    val spokenText = matches[0]
+                    val analyzed = viewModel.analyzeVoiceInput(spokenText)
+                    voiceResultTodos = analyzed
+                }
+            }
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        }
+        speechRecognizer.setRecognitionListener(listener)
+        onDispose {
+            speechRecognizer.destroy()
         }
     }
 
@@ -114,12 +141,9 @@ fun TodoListScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.voice_prompt))
-            }
-            speechRecognizerLauncher.launch(intent)
+            // Permission granted, user can try pressing again
+        } else {
+             android.widget.Toast.makeText(context, "需要麦克风权限 (Need mic permission)", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -221,38 +245,55 @@ fun TodoListScreen(
                     singleLine = true
                 )
                 
-                // Voice Button
-                FloatingActionButton(
-                    onClick = {
-                        when (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)) {
-                            PackageManager.PERMISSION_GRANTED -> {
-                                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                                    putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.voice_prompt))
-                                }
-                                try {
-                                    speechRecognizerLauncher.launch(intent)
-                                } catch (e: Exception) {
-                                    android.widget.Toast.makeText(context, context.getString(R.string.voice_not_supported), android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            else -> {
-                                requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        }
-                    },
+                // Voice Button (Press and Hold)
+                Box(
                     modifier = Modifier
                         .padding(start = 12.dp)
-                        .size(56.dp),
-                    containerColor = NeonGreen,
-                    contentColor = Color.Black,
-                    shape = CircleShape
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(if (isRecording) Color.Red else NeonGreen) // Visual feedback
+                        .pointerInput(Unit) {
+                             detectTapGestures(
+                                 onPress = {
+                                     val isAvailable = android.speech.SpeechRecognizer.isRecognitionAvailable(context)
+                                     if (!isAvailable) {
+                                         android.widget.Toast.makeText(context, "设备不支持语音识别 (Speech not available)", android.widget.Toast.LENGTH_SHORT).show()
+                                         return@detectTapGestures
+                                     }
+
+                                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                         try {
+                                             isRecording = true
+                                             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                                                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                                                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                                             }
+                                             speechRecognizer.startListening(intent)
+                                             
+                                             tryAwaitRelease()
+                                             
+                                             speechRecognizer.stopListening()
+                                             isRecording = false
+                                         } catch (e: Exception) {
+                                             isRecording = false
+                                             e.printStackTrace()
+                                             android.widget.Toast.makeText(context, "无法启动语音: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                         }
+                                     } else {
+                                         requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                     }
+                                 }
+                             )
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(id = android.R.drawable.ic_btn_speak_now),
                         contentDescription = "Add by voice",
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(28.dp),
+                        tint = Color.Black
                     )
                 }
             }
