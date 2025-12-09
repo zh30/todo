@@ -13,4 +13,5 @@
     <string name="follow_system">Défaut du système</string>
     <string name="language_en">Anglais</string>
     <string name="language_zh">Chinois</string>
+    <string name="empty_state_hint">Pas encore de tâches ?\nAppuyez sur le micro pour commencer !</string>
 </resources>

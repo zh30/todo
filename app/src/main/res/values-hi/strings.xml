@@ -13,4 +13,5 @@
     <string name="follow_system">सिस्टम डिफ़ॉल्ट</string>
     <string name="language_en">अंग्रेज़ी</string>
     <string name="language_zh">चीनी</string>
+    <string name="empty_state_hint">अभी तक कोई कार्य नहीं?\nशुरू करने के लिए माइक्रोफ़ोन पर टैप करें!</string>
 </resources>

@@ -13,4 +13,5 @@
     <string name="follow_system">النظام الافتراضي</string>
     <string name="language_en">إنجليزي</string>
     <string name="language_zh">صيني</string>
+    <string name="empty_state_hint">لا توجد مهام بعد؟\nاضغط على الميكروفون للبدء!</string>
 </resources>

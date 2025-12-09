@@ -13,4 +13,5 @@
     <string name="follow_system">System Default</string>
     <string name="language_en">English</string>
     <string name="language_zh">Chinese</string>
+    <string name="empty_state_hint">No tasks yet?\nTap the microphone to get started!</string>
 </resources>

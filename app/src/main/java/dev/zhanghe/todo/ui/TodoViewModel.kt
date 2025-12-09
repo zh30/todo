@@ -15,11 +15,6 @@ class TodoViewModel : ViewModel() {
     init {
         // Add some sample data
         _todoItems.value = listOf(
-            TodoItem(id = newId(), task = "明天下午三点去银行"),
-            TodoItem(id = newId(), task = "购买牛奶和鸡蛋", isCompleted = true),
-            TodoItem(id = newId(), task = "完成UI设计稿的最终版本"),
-            TodoItem(id = newId(), task = "晚上8点记得看直播"),
-            TodoItem(id = newId(), task = "预定周五晚上的餐厅")
         )
     }
 

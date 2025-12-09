@@ -13,4 +13,5 @@
     <string name="follow_system">Padrão do sistema</string>
     <string name="language_en">Inglês</string>
     <string name="language_zh">Chinês</string>
+    <string name="empty_state_hint">Ainda não tem tarefas?\nToque no microfone para começar!</string>
 </resources>

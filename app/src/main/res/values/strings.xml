@@ -18,4 +18,5 @@
     <string name="language_ar">العربية</string>
     <string name="language_bn">বাংলা</string>
     <string name="language_pt">Português</string>
+    <string name="empty_state_hint">还没有待办事项？\n点击麦克风开始吧！</string>
 </resources>

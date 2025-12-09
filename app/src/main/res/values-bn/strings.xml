@@ -13,4 +13,5 @@
     <string name="follow_system">সিস্টেম ডিফল্ট</string>
     <string name="language_en">ইংরেজি</string>
     <string name="language_zh">চীনা</string>
+    <string name="empty_state_hint">এখনও কোন কাজ নেই?\nশুরু করতে মাইক্রোফোনে আলতো চাপুন!</string>
 </resources>

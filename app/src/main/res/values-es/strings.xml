@@ -13,4 +13,5 @@
     <string name="follow_system">Predeterminado del sistema</string>
     <string name="language_en">Inglés</string>
     <string name="language_zh">Chino</string>
+    <string name="empty_state_hint">¿No hay tareas aún?\n¡Toca el micrófono para empezar!</string>
 </resources>
