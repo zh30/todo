@@ -67,17 +67,7 @@ import dev.zhanghe.todo.ui.theme.NeonGreen
 import dev.zhanghe.todo.ui.theme.SurfaceGreen
 import dev.zhanghe.todo.ui.theme.DeepDarkGreen
 import dev.zhanghe.todo.ui.theme.RedDelete
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Surface
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import dev.zhanghe.todo.ui.theme.NeonGreen
-import dev.zhanghe.todo.ui.theme.SurfaceGreen
-import dev.zhanghe.todo.ui.theme.DeepDarkGreen
-import dev.zhanghe.todo.ui.theme.RedDelete
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -207,7 +197,11 @@ fun TodoListScreen(
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
                                     putExtra(RecognizerIntent.EXTRA_PROMPT, "请说出您的待办事项")
                                 }
-                                speechRecognizerLauncher.launch(intent)
+                                try {
+                                    speechRecognizerLauncher.launch(intent)
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "您的设备不支持语音识别", android.widget.Toast.LENGTH_SHORT).show()
+                                }
                             }
                             else -> {
                                 requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
