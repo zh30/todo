@@ -67,6 +67,8 @@ import dev.zhanghe.todo.ui.theme.NeonGreen
 import dev.zhanghe.todo.ui.theme.SurfaceGreen
 import dev.zhanghe.todo.ui.theme.DeepDarkGreen
 import dev.zhanghe.todo.ui.theme.RedDelete
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,6 +76,14 @@ import dev.zhanghe.todo.ui.theme.RedDelete
 fun TodoListScreen(
     viewModel: TodoViewModel = viewModel()
 ) {
+    // Simplified navigation state: if true, show Settings Screen
+    var showSettings by remember { mutableStateOf(false) }
+    
+    if (showSettings) {
+        SettingsScreen(onBack = { showSettings = false })
+        return
+    }
+
     val todoItems by viewModel.todoItems.collectAsState()
     var newTodoText by remember { mutableStateOf("") }
     // State to show the voice generation dialog
@@ -104,7 +114,7 @@ fun TodoListScreen(
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                putExtra(RecognizerIntent.EXTRA_PROMPT, "请说出您的待办事项")
+                putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.voice_prompt))
             }
             speechRecognizerLauncher.launch(intent)
         }
@@ -130,7 +140,7 @@ fun TodoListScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "语音待办", // Hardcoded per design "语音待办"
+                            text = stringResource(R.string.app_title),
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
@@ -142,10 +152,24 @@ fun TodoListScreen(
                     actionIconContentColor = Color.White
                 ),
                 actions = {
-                    IconButton(onClick = { /* TODO */ }) {
+                    var showMenu by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showMenu = true }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "More options"
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        containerColor = SurfaceGreen
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.settings), color = Color.White) },
+                            onClick = {
+                                showMenu = false
+                                showSettings = true
+                            }
                         )
                     }
                 }
@@ -162,7 +186,7 @@ fun TodoListScreen(
                 TextField(
                     value = newTodoText,
                     onValueChange = { newTodoText = it },
-                    placeholder = { Text("添加待办事项...", color = Color.Gray) },
+                    placeholder = { Text(stringResource(R.string.add_todo_hint), color = Color.Gray) },
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(50)) // Pill shape
@@ -195,12 +219,12 @@ fun TodoListScreen(
                                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                                    putExtra(RecognizerIntent.EXTRA_PROMPT, "请说出您的待办事项")
+                                    putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.voice_prompt))
                                 }
                                 try {
                                     speechRecognizerLauncher.launch(intent)
                                 } catch (e: Exception) {
-                                    android.widget.Toast.makeText(context, "您的设备不支持语音识别", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(context, context.getString(R.string.voice_not_supported), android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             }
                             else -> {
@@ -317,7 +341,7 @@ fun VoiceResultDialog(
                         )
                     }
                     Text(
-                        text = "语音生成待办",
+                        text = stringResource(R.string.voice_dialog_title),
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
@@ -378,7 +402,7 @@ fun VoiceResultDialog(
                         shape = RoundedCornerShape(25.dp)
                     ) {
                         Text(
-                            text = "全部添加",
+                            text = stringResource(R.string.add_all),
                             color = Color.Black,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
@@ -397,7 +421,7 @@ fun VoiceResultDialog(
                         shape = RoundedCornerShape(25.dp)
                     ) {
                         Text(
-                            text = "取消",
+                            text = stringResource(R.string.cancel),
                             fontSize = 16.sp
                         )
                     }

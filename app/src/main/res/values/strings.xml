@@ -1,3 +1,15 @@
 <resources>
     <string name="app_name">语音待办</string>
+    <string name="app_title">语音待办</string>
+    <string name="add_todo_hint">添加待办事项...</string>
+    <string name="voice_prompt">请说出您的待办事项</string>
+    <string name="voice_dialog_title">语音生成待办</string>
+    <string name="add_all">全部添加</string>
+    <string name="cancel">取消</string>
+    <string name="voice_not_supported">您的设备不支持语音识别</string>
+    <string name="settings">设置</string>
+    <string name="language">语言</string>
+    <string name="follow_system">跟随系统</string>
+    <string name="language_en">English</string>
+    <string name="language_zh">中文</string>
 </resources>
