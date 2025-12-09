@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Voice Todo</string>
+    <string name="app_title">Voice Todo</string>
+    <string name="add_todo_hint">Ajouter une tâche...</string>
+    <string name="voice_prompt">Dites vos tâches</string>
+    <string name="voice_dialog_title">Tâches générées par la voix</string>
+    <string name="add_all">Tout ajouter</string>
+    <string name="cancel">Annuler</string>
+    <string name="voice_not_supported">La reconnaissance vocale n\'est pas prise en charge sur cet appareil</string>
+    <string name="settings">Paramètres</string>
+    <string name="language">Langue</string>
+    <string name="follow_system">Défaut du système</string>
+    <string name="language_en">Anglais</string>
+    <string name="language_zh">Chinois</string>
+</resources>

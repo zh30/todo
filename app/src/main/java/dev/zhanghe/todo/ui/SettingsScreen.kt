@@ -28,6 +28,8 @@ import dev.zhanghe.todo.ui.theme.NeonGreen
 import dev.zhanghe.todo.ui.theme.SurfaceGreen
 import androidx.compose.ui.window.Dialog
 import java.util.Locale
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,12 @@ fun SettingsScreen(
     val languageSubtitle = when (currentLocale?.language) {
         "zh" -> stringResource(R.string.language_zh)
         "en" -> stringResource(R.string.language_en)
+        "es" -> stringResource(R.string.language_es)
+        "fr" -> stringResource(R.string.language_fr)
+        "hi" -> stringResource(R.string.language_hi)
+        "ar" -> stringResource(R.string.language_ar)
+        "bn" -> stringResource(R.string.language_bn)
+        "pt" -> stringResource(R.string.language_pt)
         else -> stringResource(R.string.follow_system)
     }
 
@@ -108,7 +116,11 @@ fun LanguageSelectionDialog(
             color = SurfaceGreen,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()) 
+            ) {
                 Text(
                     text = stringResource(R.string.language),
                     fontSize = 20.sp,
@@ -119,6 +131,12 @@ fun LanguageSelectionDialog(
                 LanguageOption(text = stringResource(R.string.follow_system), onClick = { onLanguageSelected("") })
                 LanguageOption(text = stringResource(R.string.language_zh), onClick = { onLanguageSelected("zh") })
                 LanguageOption(text = stringResource(R.string.language_en), onClick = { onLanguageSelected("en") })
+                LanguageOption(text = stringResource(R.string.language_es), onClick = { onLanguageSelected("es") })
+                LanguageOption(text = stringResource(R.string.language_fr), onClick = { onLanguageSelected("fr") })
+                LanguageOption(text = stringResource(R.string.language_pt), onClick = { onLanguageSelected("pt") })
+                LanguageOption(text = stringResource(R.string.language_hi), onClick = { onLanguageSelected("hi") })
+                LanguageOption(text = stringResource(R.string.language_ar), onClick = { onLanguageSelected("ar") })
+                LanguageOption(text = stringResource(R.string.language_bn), onClick = { onLanguageSelected("bn") })
             }
         }
     }

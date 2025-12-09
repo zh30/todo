@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Voice Todo</string>
+    <string name="app_title">Voice Todo</string>
+    <string name="add_todo_hint">أضف مهمة...</string>
+    <string name="voice_prompt">انطق مهامك</string>
+    <string name="voice_dialog_title">المهام المولدة صوتياً</string>
+    <string name="add_all">إضافة الكل</string>
+    <string name="cancel">إلغاء</string>
+    <string name="voice_not_supported">التعرف الصوتي غير مدعوم على هذا الجهاز</string>
+    <string name="settings">الإعدادات</string>
+    <string name="language">اللغة</string>
+    <string name="follow_system">النظام الافتراضي</string>
+    <string name="language_en">إنجليزي</string>
+    <string name="language_zh">صيني</string>
+</resources>

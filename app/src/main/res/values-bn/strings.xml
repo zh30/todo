@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Voice Todo</string>
+    <string name="app_title">Voice Todo</string>
+    <string name="add_todo_hint">একটি কাজ যোগ করুন...</string>
+    <string name="voice_prompt">আপনার কাজগুলি বলুন</string>
+    <string name="voice_dialog_title">ভয়েস জেনারেটেড টাস্ক</string>
+    <string name="add_all">সব যোগ করুন</string>
+    <string name="cancel">বাতিল</string>
+    <string name="voice_not_supported">এই ডিভাইসে ভয়েস রিকগনিশন সমর্থিত নয়</string>
+    <string name="settings">সেটিংস</string>
+    <string name="language">ভাষা</string>
+    <string name="follow_system">সিস্টেম ডিফল্ট</string>
+    <string name="language_en">ইংরেজি</string>
+    <string name="language_zh">চীনা</string>
+</resources>
