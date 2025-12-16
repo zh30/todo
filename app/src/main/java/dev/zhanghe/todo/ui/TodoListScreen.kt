@@ -85,7 +85,10 @@ fun TodoListScreen(
     var showSettings by remember { mutableStateOf(false) }
     
     if (showSettings) {
-        SettingsScreen(onBack = { showSettings = false })
+        SettingsScreen(
+            onBack = { showSettings = false },
+            viewModel = viewModel
+        )
         return
     }
 
@@ -93,6 +96,7 @@ fun TodoListScreen(
     var newTodoText by remember { mutableStateOf("") }
     // State to show the voice generation dialog
     var voiceResultTodos by remember { mutableStateOf<List<String>?>(null) }
+    var isAnalyzing by remember { mutableStateOf(false) } // New loading state
     
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
@@ -124,8 +128,11 @@ fun TodoListScreen(
                 val matches = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
                     val spokenText = matches[0]
-                    val analyzed = viewModel.analyzeVoiceInput(spokenText)
-                    voiceResultTodos = analyzed
+                    isAnalyzing = true // Start loading
+                    viewModel.analyzeVoiceInput(spokenText) { analyzed ->
+                        isAnalyzing = false // Stop loading
+                        voiceResultTodos = analyzed
+                    }
                 }
             }
             override fun onPartialResults(partialResults: Bundle?) {}
@@ -246,10 +253,12 @@ fun TodoListScreen(
                         .padding(start = 12.dp)
                         .size(56.dp)
                         .clip(CircleShape)
+                        .clip(CircleShape)
                         .background(if (isRecording) Color.Red else NeonGreen) // Visual feedback
                         .pointerInput(Unit) {
                              detectTapGestures(
                                  onPress = {
+                                     if (isAnalyzing) return@detectTapGestures // Prevent while analyzing
                                      val isAvailable = android.speech.SpeechRecognizer.isRecognitionAvailable(context)
                                      if (!isAvailable) {
                                          android.widget.Toast.makeText(context, context.getString(R.string.voice_not_supported), android.widget.Toast.LENGTH_SHORT).show()
@@ -290,6 +299,14 @@ fun TodoListScreen(
                         modifier = Modifier.size(28.dp),
                         tint = Color.Black
                     )
+                    
+                    if (isAnalyzing) {
+                         androidx.compose.material3.CircularProgressIndicator(
+                             modifier = Modifier.size(56.dp),
+                             color = Color.White,
+                             strokeWidth = 2.dp
+                         )
+                    }
                 }
             }
         }

@@ -29,4 +29,6 @@
     <string name="cd_mic">麦克风</string>
     <string name="cd_close">关闭</string>
     <string name="cd_remove">移除</string>
+    <string name="settings_ai_model">AI 模型 (LLM)</string>
+    <string name="settings_privacy_policy">隐私政策</string>
 </resources>

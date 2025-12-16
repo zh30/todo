@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Fix for "Missing class javax.annotation.processing..." errors during R8 minification.
+# These classes are used by annotation processors (like AutoValue) but are not needed at runtime on Android.
+-dontwarn javax.annotation.processing.**
+-dontwarn javax.lang.model.**
+-dontwarn com.google.auto.value.**

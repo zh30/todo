@@ -1,14 +1,26 @@
 package dev.zhanghe.todo.ui
 
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dev.zhanghe.todo.data.TodoItem
+import dev.zhanghe.todo.domain.LocalLLMAnalyzer
+import dev.zhanghe.todo.domain.RuleBasedAnalyzer
+import dev.zhanghe.todo.domain.VoiceCommandAnalyzer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 
-class TodoViewModel : ViewModel() {
+class TodoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _todoItems = MutableStateFlow<List<TodoItem>>(emptyList())
     val todoItems: StateFlow<List<TodoItem>> = _todoItems
+
+    private val _isAiLoaded = MutableStateFlow(false)
+    val isAiLoaded: StateFlow<Boolean> = _isAiLoaded
+
+    private var voiceAnalyzer: VoiceCommandAnalyzer = RuleBasedAnalyzer()
+    private var llmAnalyzer: LocalLLMAnalyzer? = null
 
     private var lastId = 0L
 
@@ -28,14 +40,30 @@ class TodoViewModel : ViewModel() {
         _todoItems.value = _todoItems.value + newItems
     }
 
-    fun analyzeVoiceInput(text: String): List<String> {
-        // Placeholder for local AI model analysis
-        // For now, we'll split by spaces if it contains "和" (and), or just return the text as a single item
-        // This simulates the behavior of breaking down a complex sentence into tasks
-        return if (text.contains("和") || text.contains("，") || text.contains(",")) {
-            text.split("和", "，", ",").map { it.trim() }.filter { it.isNotEmpty() }
-        } else {
-            listOf(text.trim())
+    fun loadAiModel(path: String) {
+        viewModelScope.launch {
+            val analyzer = LocalLLMAnalyzer(getApplication(), path)
+            if (analyzer.initialize()) {
+                llmAnalyzer = analyzer
+                voiceAnalyzer = analyzer
+                _isAiLoaded.value = true
+            } else {
+                _isAiLoaded.value = false
+                // Fallback remains RuleBased
+            }
+        }
+    }
+
+    fun analyzeVoiceInput(text: String, onResult: (List<String>) -> Unit) {
+        viewModelScope.launch {
+            val results = voiceAnalyzer.analyze(text)
+            // If results are empty (AI failed), try fallback if we were using AI
+            if (results.isEmpty() && voiceAnalyzer is LocalLLMAnalyzer) {
+                val fallback = RuleBasedAnalyzer().analyze(text)
+                onResult(fallback)
+            } else {
+                onResult(results)
+            }
         }
     }
 

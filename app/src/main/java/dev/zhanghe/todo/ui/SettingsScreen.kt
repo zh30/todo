@@ -14,6 +14,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,10 +36,46 @@ import androidx.compose.foundation.verticalScroll
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: TodoViewModel
 ) {
     var showLanguageDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    val isAiLoaded by viewModel.isAiLoaded.collectAsState()
+    var isLoadingModel by remember { mutableStateOf(false) }
+
+    val modelPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            isLoadingModel = true
+            // Copy to internal storage
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(it)
+                    val file = java.io.File(context.filesDir, "custom_llm.bin")
+                    val outputStream = java.io.FileOutputStream(file)
+                    inputStream?.copyTo(outputStream)
+                    inputStream?.close()
+                    outputStream.close()
+                    
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        viewModel.loadAiModel(file.absolutePath)
+                        isLoadingModel = false
+                        android.widget.Toast.makeText(context, "AI Model loaded!", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        isLoadingModel = false
+                        android.widget.Toast.makeText(context, "Failed to load model", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
     
     // Determine current language state for display. 
     // This is a simplified check. Ideally we read from AppCompatDelegate or LocaleManager.
@@ -99,6 +137,40 @@ fun SettingsScreen(
                 supportingContent = { Text(languageSubtitle, color = Color.Gray) },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 modifier = Modifier.clickable { showLanguageDialog = true }
+            )
+            HorizontalDivider(color = SurfaceGreen)
+
+            // AI Model Section
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_ai_model), color = Color.White) },
+                supportingContent = { 
+                    if (isLoadingModel) {
+                        Text("Loading model...", color = NeonGreen)
+                    } else {
+                        Text(if (isAiLoaded) "Model Loaded (Ready)" else "No Model Loaded (Using Basic Parser)", color = Color.Gray)
+                    }
+                },
+                trailingContent = {
+                    Button(
+                        onClick = { modelPickerLauncher.launch(arrayOf("*/*")) }, // Allow any file, or application/octet-stream
+                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceGreen)
+                    ) {
+                        Text("Select .bin", color = Color.White)
+                    }
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            HorizontalDivider(color = SurfaceGreen)
+            
+            // Privacy Policy Section (Required for RECORD_AUDIO permission)
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_privacy_policy), color = Color.White) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable {
+                    // Open browser with privacy policy
+                     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/zh30/todoapp/blob/main/PRIVACY_POLICY.md"))
+                     context.startActivity(intent)
+                }
             )
             HorizontalDivider(color = SurfaceGreen)
         }
