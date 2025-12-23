@@ -1,7 +1,7 @@
 package dev.zhanghe.todo.domain
 
 class RuleBasedAnalyzer : VoiceCommandAnalyzer {
-    override suspend fun analyze(text: String): List<String> {
+    override suspend fun analyze(text: String): List<VoiceCommand> {
         val splitDelimiters = listOf(
             "和", "，", ",", "然后", "接着", "plus", "and", "then", ";", "；", "。"
         )
@@ -10,14 +10,16 @@ class RuleBasedAnalyzer : VoiceCommandAnalyzer {
         
         // Simple heuristic: if it looks like a list "1. Buy milk 2. Buy eggs"
         val numberedListRegex = Regex("\\d+[\\.\\、\\s]\\s*")
-        if (numberedListRegex.containsMatchIn(processed)) {
-             return processed.split(numberedListRegex)
+        val strings = if (numberedListRegex.containsMatchIn(processed)) {
+             processed.split(numberedListRegex)
                  .map { it.trim() }
                  .filter { it.isNotEmpty() }
+        } else {
+            // Standard split
+            processSplit(processed, splitDelimiters)
         }
 
-        // Standard split
-        return processSplit(processed, splitDelimiters)
+        return strings.map { VoiceCommand.AddTodo(it) }
     }
 
     private fun processSplit(text: String, delimiters: List<String>): List<String> {

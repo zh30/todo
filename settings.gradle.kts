@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Todo"
 include(":app")
+include(":model_assets")

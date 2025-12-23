@@ -17,12 +17,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,11 +53,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.zhanghe.todo.R
 import dev.zhanghe.todo.data.TodoItem
+import dev.zhanghe.todo.domain.VoiceCommand
 import java.util.Locale
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -95,7 +95,7 @@ fun TodoListScreen(
     val todoItems by viewModel.todoItems.collectAsState()
     var newTodoText by remember { mutableStateOf("") }
     // State to show the voice generation dialog
-    var voiceResultTodos by remember { mutableStateOf<List<String>?>(null) }
+    var voiceResultCommands by remember { mutableStateOf<List<VoiceCommand>?>(null) }
     var isAnalyzing by remember { mutableStateOf(false) } // New loading state
     
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -131,7 +131,7 @@ fun TodoListScreen(
                     isAnalyzing = true // Start loading
                     viewModel.analyzeVoiceInput(spokenText) { analyzed ->
                         isAnalyzing = false // Stop loading
-                        voiceResultTodos = analyzed
+                        voiceResultCommands = analyzed
                     }
                 }
             }
@@ -154,13 +154,13 @@ fun TodoListScreen(
         }
     }
 
-    if (voiceResultTodos != null) {
+    if (voiceResultCommands != null) {
         VoiceResultDialog(
-            initialTasks = voiceResultTodos!!,
-            onDismiss = { voiceResultTodos = null },
-            onConfirm = { finalTasks ->
-                viewModel.addTodos(finalTasks)
-                voiceResultTodos = null
+            initialCommands = voiceResultCommands!!,
+            onDismiss = { voiceResultCommands = null },
+            onConfirm = { finalCommands ->
+                viewModel.executeVoiceCommands(finalCommands)
+                voiceResultCommands = null
             }
         )
     }
@@ -324,7 +324,7 @@ fun TodoListScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Outlined.Mic,
+                        imageVector = Icons.Default.PlayArrow,
                         contentDescription = stringResource(R.string.cd_mic),
                         tint = SurfaceGreen,
                         modifier = Modifier.size(80.dp)
@@ -369,17 +369,16 @@ fun TodoListItem(item: TodoItem, onToggleCompletion: () -> Unit, onDeleteItem: (
         IconButton(onClick = onToggleCompletion) {
             if (item.isCompleted) {
                 Icon(
-                    imageVector = Icons.Filled.CheckCircle,
+                    imageVector = Icons.Default.Check,
                     contentDescription = null,
                     tint = NeonGreen,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             } else {
-                Icon(
-                    imageVector = Icons.Outlined.Circle,
-                    contentDescription = null,
-                    tint = Color.Gray,
-                    modifier = Modifier.size(28.dp)
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .border(2.dp, Color.Gray, CircleShape)
                 )
             }
         }
@@ -398,17 +397,17 @@ fun TodoListItem(item: TodoItem, onToggleCompletion: () -> Unit, onDeleteItem: (
 
 @Composable
 fun VoiceResultDialog(
-    initialTasks: List<String>,
+    initialCommands: List<VoiceCommand>,
     onDismiss: () -> Unit,
-    onConfirm: (List<String>) -> Unit
+    onConfirm: (List<VoiceCommand>) -> Unit
 ) {
     // Local state to manage the list within the dialog before confirming
-    var tasks by remember { mutableStateOf(initialTasks) }
+    var commands by remember { mutableStateOf(initialCommands) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = DeepDarkGreen, // Using app background color for the dialog as well, or SurfaceGreen? Design shows dark.
+            color = DeepDarkGreen,
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.85f)
@@ -427,7 +426,7 @@ fun VoiceResultDialog(
                 ) {
                     IconButton(onClick = onDismiss) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                            imageVector = Icons.Default.Close,
                             contentDescription = stringResource(R.string.cd_close),
                             tint = Color.White
                         )
@@ -438,8 +437,7 @@ fun VoiceResultDialog(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    // Empty box to balance the cross icon if needed, or just spacers.
-                     Box(modifier = Modifier.size(48.dp))
+                    Box(modifier = Modifier.size(48.dp))
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -449,7 +447,13 @@ fun VoiceResultDialog(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(tasks) { task ->
+                    items(commands) { command ->
+                        val (icon, tint, label, task) = when (command) {
+                            is VoiceCommand.AddTodo -> quadruple(Icons.Default.Add, NeonGreen, "Add", command.task)
+                            is VoiceCommand.RemoveTodo -> quadruple(Icons.Default.Delete, RedDelete, "Remove", command.task)
+                            is VoiceCommand.CompleteTodo -> quadruple(Icons.Default.Check, NeonGreen, "Done", command.task)
+                        }
+
                         Card(
                             colors = CardDefaults.cardColors(containerColor = SurfaceGreen),
                             shape = RoundedCornerShape(16.dp),
@@ -462,16 +466,19 @@ fun VoiceResultDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = task,
-                                    color = Color.White,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(onClick = { tasks = tasks - task }) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Column {
+                                        Text(label, color = tint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(task, color = Color.White)
+                                    }
+                                }
+                                IconButton(onClick = { commands = commands - command }) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Delete, // Use outlined delete for style
+                                        imageVector = Icons.Default.Delete,
                                         contentDescription = stringResource(R.string.cd_remove),
-                                        tint = Color.Gray // Or maybe a softer delete color
+                                        tint = Color.Gray
                                     )
                                 }
                             }
@@ -486,7 +493,7 @@ fun VoiceResultDialog(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
-                        onClick = { onConfirm(tasks) },
+                        onClick = { onConfirm(commands) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
@@ -494,7 +501,7 @@ fun VoiceResultDialog(
                         shape = RoundedCornerShape(25.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.add_all),
+                            text = stringResource(R.string.confirm),
                             color = Color.Black,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
@@ -522,3 +529,7 @@ fun VoiceResultDialog(
         }
     }
 }
+
+// Simple helper for multiple return values in the dialog
+data class CommandRowData(val icon: androidx.compose.ui.graphics.vector.ImageVector, val tint: Color, val label: String, val task: String)
+fun quadruple(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, label: String, task: String) = CommandRowData(icon, tint, label, task)

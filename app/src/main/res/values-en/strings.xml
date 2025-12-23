@@ -24,4 +24,5 @@
     <string name="cd_mic">Mic</string>
     <string name="cd_close">Close</string>
     <string name="cd_remove">Remove</string>
+    <string name="confirm">Confirm</string>
 </resources>

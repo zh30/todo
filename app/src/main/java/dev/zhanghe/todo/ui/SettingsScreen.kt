@@ -52,7 +52,7 @@ fun SettingsScreen(
         uri?.let {
             isLoadingModel = true
             // Copy to internal storage
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     val inputStream = context.contentResolver.openInputStream(it)
                     val file = java.io.File(context.filesDir, "custom_llm.bin")

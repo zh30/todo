@@ -18,9 +18,11 @@ android {
         minSdk = 24
         targetSdk = 36
         versionCode = 2
-        versionName = "1.0.3"
+        versionName = "1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        resourceConfigurations.addAll(listOf("zh", "en", "es", "fr", "hi", "ar", "bn", "pt"))
     }
 
 
@@ -48,6 +50,10 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            ndk {
+                debugSymbolLevel = "full"
+                abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+            }
         }
     }
     compileOptions {
@@ -60,6 +66,8 @@ android {
     buildFeatures {
         compose = true
     }
+    
+    assetPacks.add(":model_assets")
 }
 
 dependencies {
@@ -73,7 +81,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
-    implementation("androidx.compose.material:material-icons-extended:1.6.7")
     implementation("androidx.appcompat:appcompat:1.7.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -83,4 +90,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.mediapipe.tasks.genai)
+    implementation("com.google.android.play:asset-delivery-ktx:2.2.2")
 }

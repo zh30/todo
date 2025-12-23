@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
+import org.json.JSONObject
+
 class LocalLLMAnalyzer(
     private val context: Context,
     private val modelPath: String
@@ -26,7 +28,7 @@ class LocalLLMAnalyzer(
                     .setModelPath(modelPath)
                     .setMaxTokens(1024)
                     .setTopK(40)
-                    .setTemperature(0.8f)
+                    .setTemperature(0.1f) // Lower temperature for more consistent function calling
                     .setRandomSeed(101)
                     .build()
 
@@ -41,39 +43,70 @@ class LocalLLMAnalyzer(
 
     override fun isReady(): Boolean = llmInference != null
 
-    override suspend fun analyze(text: String): List<String> {
+    override suspend fun analyze(text: String): List<VoiceCommand> {
         if (llmInference == null) return emptyList()
 
         return withContext(Dispatchers.IO) {
             try {
-                // Prompt Engineering
+                // Prompt Engineering for FunctionGemma
                 val prompt = """
-                    You are a helpful assistant.
-                    Split the following text into a list of distinct todo items.
-                    Text: "$text"
-                    
-                    Output ONLY the items, one per line. Do not number them. Do not include bullet points.
+                    <start_function_declaration>
+                    {"name": "add_todo", "description": "Add a new todo item", "parameters": {"type": "object", "properties": {"task": {"type": "string", "description": "The task to add"}}, "required": ["task"]}}
+                    {"name": "remove_todo", "description": "Remove a todo item", "parameters": {"type": "object", "properties": {"task": {"type": "string", "description": "The task to remove"}}, "required": ["task"]}}
+                    {"name": "complete_todo", "description": "Mark a todo item as completed", "parameters": {"type": "object", "properties": {"task": {"type": "string", "description": "The task to complete"}}, "required": ["task"]}}
+                    <end_function_declaration>
+                    User input: "$text"
                 """.trimIndent()
                 
                 val result = llmInference?.generateResponse(prompt) ?: ""
                 
-                // Parse result (assuming one per line)
-                result.lines()
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    // Filter out common hallucinations or conversational filler if necessary
-                    .filter { !it.startsWith("Here are") } 
+                parseFunctionCalls(result)
             } catch (e: Exception) {
                 e.printStackTrace()
                 emptyList()
             }
         }
     }
+
+    private fun parseFunctionCalls(text: String): List<VoiceCommand> {
+        val commands = mutableListOf<VoiceCommand>()
+        
+        // Extract content between <start_function_call> and <end_function_call>
+        val regex = Regex("<start_function_call>(.*?)<end_function_call>", RegexOption.DOT_MATCHES_ALL)
+        val matches = regex.findAll(text)
+        
+        for (match in matches) {
+            try {
+                val jsonString = match.groupValues[1].trim()
+                val json = JSONObject(jsonString)
+                val functionName = json.getString("name")
+                val arguments = json.getJSONObject("arguments")
+                val task = arguments.getString("task")
+                
+                when (functionName) {
+                    "add_todo" -> commands.add(VoiceCommand.AddTodo(task))
+                    "remove_todo" -> commands.add(VoiceCommand.RemoveTodo(task))
+                    "complete_todo" -> commands.add(VoiceCommand.CompleteTodo(task))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        
+        // Fallback: If no function calls detected but there's output, 
+        // it might be a simple addition or the model failed tokens but gave plain text.
+        if (commands.isEmpty() && text.isNotBlank() && !text.contains("<start_function_call>")) {
+             // Simple fallback parsing for robustness
+             text.lines()
+                 .map { it.trim() }
+                 .filter { it.isNotEmpty() && !it.startsWith("<") }
+                 .forEach { commands.add(VoiceCommand.AddTodo(it)) }
+        }
+        
+        return commands
+    }
     
     fun close() {
-        // LlmInference doesn't explicitly have close() in some versions, 
-        // but it's good practice to null it out or check docs. 
-        // The current API might not need manual close, relying on GC, but we'll monitor.
         llmInference = null
     }
 }
