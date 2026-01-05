@@ -21,7 +21,7 @@ android {
         versionName = "1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
+
         resourceConfigurations.addAll(listOf("zh", "en", "es", "fr", "hi", "ar", "bn", "pt"))
     }
 
@@ -32,7 +32,7 @@ android {
             if (keystorePropertiesFile.exists()) {
                 val props = Properties()
                 props.load(FileInputStream(keystorePropertiesFile))
-                
+
                 keyAlias = props.getProperty("keyAlias")
                 keyPassword = props.getProperty("keyPassword")
                 storeFile = if (props.getProperty("storeFile") != null) file(props.getProperty("storeFile")) else null
@@ -66,7 +66,7 @@ android {
     buildFeatures {
         compose = true
     }
-    
+
     assetPacks.add(":model_assets")
 }
 
