@@ -2,16 +2,18 @@ package dev.zhanghe.todo.ui
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Bundle
+import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.DisposableEffect
-import android.os.Bundle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -34,6 +36,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,7 +86,7 @@ fun TodoListScreen(
 ) {
     // Simplified navigation state: if true, show Settings Screen
     var showSettings by remember { mutableStateOf(false) }
-    
+
     if (showSettings) {
         SettingsScreen(
             onBack = { showSettings = false },
@@ -97,50 +100,60 @@ fun TodoListScreen(
     // State to show the voice generation dialog
     var voiceResultCommands by remember { mutableStateOf<List<VoiceCommand>?>(null) }
     var isAnalyzing by remember { mutableStateOf(false) } // New loading state
-    
+
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
 
     // Voice Recognition State
     var isRecording by remember { mutableStateOf(false) }
-    val speechRecognizer = remember { android.speech.SpeechRecognizer.createSpeechRecognizer(context) }
-    
-    DisposableEffect(Unit) {
-        val listener = object : android.speech.RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {
-                isRecording = false
-            }
-            override fun onError(error: Int) {
-                isRecording = false
-                val message = when(error) {
-                    android.speech.SpeechRecognizer.ERROR_NO_MATCH -> context.getString(R.string.voice_error_no_match)
-                    android.speech.SpeechRecognizer.ERROR_NETWORK -> context.getString(R.string.voice_error_network)
-                    else -> context.getString(R.string.voice_error_generic, error)
-                }
-                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
-            }
-            override fun onResults(results: Bundle?) {
-                isRecording = false
-                val matches = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
-                if (!matches.isNullOrEmpty()) {
-                    val spokenText = matches[0]
-                    isAnalyzing = true // Start loading
-                    viewModel.analyzeVoiceInput(spokenText) { analyzed ->
-                        isAnalyzing = false // Stop loading
-                        voiceResultCommands = analyzed
+    var isListening by remember { mutableStateOf(false) } // Track actual listening state
+
+    // Create SpeechRecognizer with proper lifecycle handling
+    val speechRecognizer = remember {
+        if (android.speech.SpeechRecognizer.isRecognitionAvailable(context)) {
+            android.speech.SpeechRecognizer.createSpeechRecognizer(context).apply {
+                setRecognitionListener(createRecognitionListener(
+                    context = context,
+                    onReadyForSpeech = { /* Ready to receive speech */ },
+                    onBeginningOfSpeech = { /* User started speaking */ },
+                    onEndOfSpeech = {
+                        isRecording = false
+                        isListening = false
+                    },
+                    onError = { error ->
+                        isRecording = false
+                        isListening = false
+                        val message = when(error) {
+                            android.speech.SpeechRecognizer.ERROR_NO_MATCH -> context.getString(R.string.voice_error_no_match)
+                            android.speech.SpeechRecognizer.ERROR_NETWORK -> context.getString(R.string.voice_error_network)
+                            android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> context.getString(R.string.voice_error_no_match)
+                            else -> context.getString(R.string.voice_error_generic, error)
+                        }
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    onResults = { results ->
+                        isRecording = false
+                        isListening = false
+                        val matches = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                        if (!matches.isNullOrEmpty()) {
+                            val spokenText = matches[0]
+                            isAnalyzing = true
+                            viewModel.analyzeVoiceInput(spokenText) { analyzed ->
+                                isAnalyzing = false
+                                voiceResultCommands = analyzed
+                            }
+                        }
                     }
-                }
+                ))
             }
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
+        } else {
+            null
         }
-        speechRecognizer.setRecognitionListener(listener)
+    }
+
+    DisposableEffect(Unit) {
         onDispose {
-            speechRecognizer.destroy()
+            speechRecognizer?.destroy()
         }
     }
 
@@ -175,7 +188,7 @@ fun TodoListScreen(
         },
         topBar = {
             androidx.compose.material3.CenterAlignedTopAppBar(
-                title = { 
+                title = {
                     Text(
                         text = stringResource(R.string.app_title),
                         fontWeight = FontWeight.Bold,
@@ -246,50 +259,58 @@ fun TodoListScreen(
                     }),
                     singleLine = true
                 )
-                
+
                 // Voice Button (Press and Hold)
                 Box(
                     modifier = Modifier
                         .padding(start = 12.dp)
                         .size(56.dp)
                         .clip(CircleShape)
-                        .clip(CircleShape)
                         .background(if (isRecording) Color.Red else NeonGreen) // Visual feedback
                         .pointerInput(Unit) {
-                             detectTapGestures(
-                                 onPress = {
-                                     if (isAnalyzing) return@detectTapGestures // Prevent while analyzing
-                                     val isAvailable = android.speech.SpeechRecognizer.isRecognitionAvailable(context)
-                                     if (!isAvailable) {
-                                         android.widget.Toast.makeText(context, context.getString(R.string.voice_not_supported), android.widget.Toast.LENGTH_SHORT).show()
-                                         return@detectTapGestures
-                                     }
+                            detectTapGestures(
+                                onPress = {
+                                    if (isAnalyzing || isListening) return@detectTapGestures // Prevent while analyzing or already listening
 
-                                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                                         try {
-                                             isRecording = true
-                                             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                                                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                                                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                                             }
-                                             speechRecognizer.startListening(intent)
-                                             
-                                             tryAwaitRelease()
-                                             
-                                             speechRecognizer.stopListening()
-                                             isRecording = false
-                                         } catch (e: Exception) {
-                                             isRecording = false
-                                             e.printStackTrace()
-                                             android.widget.Toast.makeText(context, context.getString(R.string.voice_error_init, e.message), android.widget.Toast.LENGTH_SHORT).show()
-                                         }
-                                     } else {
-                                         requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                     }
-                                 }
-                             )
+                                    val isAvailable = SpeechRecognizer.isRecognitionAvailable(context)
+                                    if (!isAvailable) {
+                                        android.widget.Toast.makeText(context, context.getString(R.string.voice_not_supported), android.widget.Toast.LENGTH_SHORT).show()
+                                        return@detectTapGestures
+                                    }
+
+                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                        try {
+                                            isRecording = true
+                                            isListening = true
+
+                                            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                                                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                                                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                                                // Add extra timeout to give user more time to speak
+                                                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
+                                                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
+                                            }
+                                            speechRecognizer?.startListening(intent)
+
+                                            // Wait for the gesture to be released
+                                            tryAwaitRelease()
+
+                                            // Stop listening when finger is released
+                                            speechRecognizer?.stopListening()
+                                            // Note: isRecording and isListening will be reset by onEndOfSpeech callback
+                                        } catch (e: Exception) {
+                                            isRecording = false
+                                            isListening = false
+                                            e.printStackTrace()
+                                            android.widget.Toast.makeText(context, context.getString(R.string.voice_error_init, e.message), android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                    }
+                                }
+                            )
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -299,7 +320,7 @@ fun TodoListScreen(
                         modifier = Modifier.size(28.dp),
                         tint = Color.Black
                     )
-                    
+
                     if (isAnalyzing) {
                          androidx.compose.material3.CircularProgressIndicator(
                              modifier = Modifier.size(56.dp),
@@ -382,7 +403,7 @@ fun TodoListItem(item: TodoItem, onToggleCompletion: () -> Unit, onDeleteItem: (
                 )
             }
         }
-        
+
         Text(
             text = item.task,
             modifier = Modifier
@@ -533,3 +554,54 @@ fun VoiceResultDialog(
 // Simple helper for multiple return values in the dialog
 data class CommandRowData(val icon: androidx.compose.ui.graphics.vector.ImageVector, val tint: Color, val label: String, val task: String)
 fun quadruple(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, label: String, task: String) = CommandRowData(icon, tint, label, task)
+
+/**
+ * Creates a RecognitionListener for SpeechRecognizer with proper callback handling.
+ * This function encapsulates the listener creation for better code organization.
+ */
+fun createRecognitionListener(
+    context: Context,
+    onReadyForSpeech: () -> Unit,
+    onBeginningOfSpeech: () -> Unit,
+    onEndOfSpeech: () -> Unit,
+    onError: (Int) -> Unit,
+    onResults: (Bundle?) -> Unit
+): RecognitionListener {
+    return object : RecognitionListener {
+        override fun onReadyForSpeech(params: Bundle?) {
+            onReadyForSpeech()
+        }
+
+        override fun onBeginningOfSpeech() {
+            onBeginningOfSpeech()
+        }
+
+        override fun onRmsChanged(rmsdB: Float) {
+            // Can be used for visual feedback (audio level visualization)
+        }
+
+        override fun onBufferReceived(buffer: ByteArray?) {
+            // Audio buffer received during recognition
+        }
+
+        override fun onEndOfSpeech() {
+            onEndOfSpeech()
+        }
+
+        override fun onError(error: Int) {
+            onError(error)
+        }
+
+        override fun onResults(results: Bundle?) {
+            onResults(results)
+        }
+
+        override fun onPartialResults(partialResults: Bundle?) {
+            // Partial results available (if EXTRA_PARTIAL_RESULTS is set)
+        }
+
+        override fun onEvent(eventType: Int, params: Bundle?) {
+            // Reserved for future events
+        }
+    }
+}
