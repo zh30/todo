@@ -27,9 +27,6 @@ class LocalLLMAnalyzer(
                 val options = LlmInference.LlmInferenceOptions.builder()
                     .setModelPath(modelPath)
                     .setMaxTokens(1024)
-                    .setTopK(40)
-                    .setTemperature(0.1f) // Lower temperature for more consistent function calling
-                    .setRandomSeed(101)
                     .build()
 
                 llmInference = LlmInference.createFromOptions(context, options)

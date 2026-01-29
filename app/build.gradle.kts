@@ -1,30 +1,30 @@
 import java.io.FileInputStream
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "dev.zhanghe.todo"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.zhanghe.todo"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 2
         versionName = "1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        resourceConfigurations.addAll(listOf("zh", "en", "es", "fr", "hi", "ar", "bn", "pt"))
     }
 
+    androidResources {
+        localeFilters.addAll(listOf("zh", "en", "es", "fr", "hi", "ar", "bn", "pt"))
+    }
 
     signingConfigs {
         create("release") {
@@ -45,10 +45,8 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            proguardFiles.add(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles.add(file("proguard-rules.pro"))
             signingConfig = signingConfigs.getByName("release")
             ndk {
                 debugSymbolLevel = "full"
@@ -60,14 +58,18 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         compose = true
     }
 
     assetPacks.add(":model_assets")
+    buildToolsVersion = "35.0.0"
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
+    }
 }
 
 dependencies {
@@ -80,15 +82,16 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
-    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    releaseImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.mediapipe.tasks.genai)
-    implementation("com.google.android.play:asset-delivery-ktx:2.2.2")
+    implementation("com.google.android.play:asset-delivery-ktx:2.3.0")
 }
